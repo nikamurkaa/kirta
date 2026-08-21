@@ -1,7 +1,7 @@
 # KIRTA — AI Security Platform
 
 <p align="left">
-  <img src="docs/assets/badges/status.svg" height="36" alt="Status: MVP" /> <a href="https://kirta-security.ru/"><img src="docs/assets/badges/demo.svg" height="36" alt="Website: kirta-security.ru" /></a> <a href="./LICENSE"><img src="docs/assets/badges/license.svg" height="36" alt="License: MIT" /></a>
+  <img src="docs/assets/badges/status.svg" height="36" alt="Status: MVP" /> </a> <a href="./LICENSE"><img src="docs/assets/badges/license.svg" height="36" alt="License: MIT" /></a>
 </p>
 
 <p align="left">
@@ -45,15 +45,6 @@ KIRTA работает как AI-слой поверх результатов к
 
 ## Live demo
 
-Проект доступен по адресу: **https://kirta-security.ru/**
-
-Демо-вход в приложение: **https://kirta-security.ru/login**
-
-```text
-Логин: parker
-Пароль: parker
-```
-
 Демо-доступ позволяет посмотреть основной flow MVP:
 
 - Landing-страницу;
@@ -63,22 +54,6 @@ KIRTA работает как AI-слой поверх результатов к
 - карту вызовов (call map);
 - просмотр вызовов библиотеки в исходном коде;
 - AI-объяснение эксплуатируемости для отдельного дефекта.
-
----
-
-## Быстрый доступ
-
-| Раздел | Где находится |
-|---|---|
-| Вебсайт | `https://kirta-security.ru/` |
-| Авторизация | `https://kirta-security.ru/login` |
-| Демо-логин | `parker` |
-| Демо-пароль | `parker` |
-| Список сканирований | `https://kirta-security.ru/scans` |
-| Страница отчёта | `/:scanId`, например `https://kirta-security.ru/1` |
-| Swagger UI | `/swagger/index.html` при запущенном backend |
-| OpenAPI specification | `kirta-backend-api/openapi.yaml` |
-| License | MIT License |
 
 ---
 
