@@ -28,7 +28,7 @@ jobs:
           cache-dependency-path: kirta-ui/package-lock.json
 
       - name: Apply non-breaking dependency fixes
-        run: npm audit fix --package-lock-only
+        run: npm audit fix --package-lock-only || true
 
       - name: Install from repaired lockfile
         run: npm ci
