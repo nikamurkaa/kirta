@@ -8,12 +8,12 @@ import (
 )
 
 type PostgresPoolConfig struct {
-	MaxConnections       int32         `yaml:"max_connections"`
-	MinConnections       int32         `yaml:"min_connections"`
+	MaxConnections        int32         `yaml:"max_connections"`
+	MinConnections        int32         `yaml:"min_connections"`
 	MaxConnectionLifetime time.Duration `yaml:"max_connection_lifetime"`
-	MaxConnIdleTime      time.Duration `yaml:"max_conn_idle_time"`
-	HealthCheckPeriod    time.Duration `yaml:"health_check_period"`
-	ConnectTimeout       time.Duration `yaml:"connect_timeout"`
+	MaxConnIdleTime       time.Duration `yaml:"max_conn_idle_time"`
+	HealthCheckPeriod     time.Duration `yaml:"health_check_period"`
+	ConnectTimeout        time.Duration `yaml:"connect_timeout"`
 }
 
 type PostgresConfig struct {
