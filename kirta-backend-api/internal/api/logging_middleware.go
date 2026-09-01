@@ -1,13 +1,13 @@
 package api
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mast-se/go-lib/logger"
 )
 
-func RequestLogMiddleware(log logger.Logger) gin.HandlerFunc {
+func RequestLogMiddleware(log *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		c.Next()

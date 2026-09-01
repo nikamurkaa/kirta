@@ -4,19 +4,60 @@ import (
 	"os"
 	"time"
 
-	"github.com/mast-se/go-lib/logger"
-	"github.com/mast-se/go-lib/minio"
-	"github.com/mast-se/go-lib/postgres"
-	httpserver "github.com/mast-se/go-lib/server/http"
 	"go.yaml.in/yaml/v3"
 )
 
+type PostgresPoolConfig struct {
+	MaxConnections        int32         `yaml:"max_connections"`
+	MinConnections        int32         `yaml:"min_connections"`
+	MaxConnectionLifetime time.Duration `yaml:"max_connection_lifetime"`
+	MaxConnIdleTime       time.Duration `yaml:"max_conn_idle_time"`
+	HealthCheckPeriod     time.Duration `yaml:"health_check_period"`
+	ConnectTimeout        time.Duration `yaml:"connect_timeout"`
+}
+
+type PostgresConfig struct {
+	Host       string             `yaml:"host"`
+	Port       int                `yaml:"port"`
+	Database   string             `yaml:"database"`
+	SSL        string             `yaml:"ssl"`
+	Username   string             `yaml:"username"`
+	Password   string             `yaml:"password"`
+	PoolConfig PostgresPoolConfig `yaml:"pool_config"`
+}
+
+type MinioCredentials struct {
+	AccessKey string `yaml:"access_key"`
+	SecretKey string `yaml:"secret_key"`
+}
+
+type MinioConfig struct {
+	Endpoint    string           `yaml:"endpoint"`
+	UseSSL      bool             `yaml:"use_ssl"`
+	Credentials MinioCredentials `yaml:"credentials"`
+}
+
+type LoggerConfig struct {
+	Level        string `yaml:"level"`
+	EnableCaller bool   `yaml:"enable_caller"`
+	LogFile      string `yaml:"log_file"`
+}
+
+type HTTPConfig struct {
+	Address           string        `yaml:"address"`
+	ReadHeaderTimeout time.Duration `yaml:"read_header_timeout"`
+	ReadTimeout       time.Duration `yaml:"read_timeout"`
+	WriteTimeout      time.Duration `yaml:"write_timeout"`
+	IdleTimeout       time.Duration `yaml:"idle_timeout"`
+	MaxHeaderBytes    int           `yaml:"max_header_bytes"`
+}
+
 type Config struct {
-	Postgres postgres.Config   `yaml:"postgres"`
-	Minio    minio.Config      `yaml:"minio"`
-	Logger   logger.Config     `yaml:"logger"`
-	Http     httpserver.Config `yaml:"http"`
-	App      App               `yaml:"app"`
+	Postgres PostgresConfig `yaml:"postgres"`
+	Minio    MinioConfig    `yaml:"minio"`
+	Logger   LoggerConfig   `yaml:"logger"`
+	Http     HTTPConfig     `yaml:"http"`
+	App      App            `yaml:"app"`
 }
 
 type App struct {
@@ -34,7 +75,6 @@ type App struct {
 }
 
 func New(configPath string) (*Config, error) {
-
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, err
@@ -60,5 +100,14 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.App.OpenRouterCallMapCalls <= 0 {
 		cfg.App.OpenRouterCallMapCalls = 200
+	}
+	if cfg.Postgres.Port == 0 {
+		cfg.Postgres.Port = 5432
+	}
+	if cfg.Postgres.SSL == "" {
+		cfg.Postgres.SSL = "disable"
+	}
+	if cfg.Http.Address == "" {
+		cfg.Http.Address = "0.0.0.0:8080"
 	}
 }

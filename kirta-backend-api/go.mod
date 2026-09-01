@@ -8,7 +8,6 @@ require (
 	github.com/go-enry/go-enry/v2 v2.9.6
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/jackc/pgx/v5 v5.8.0
-	github.com/mast-se/go-lib v0.0.0-20260508132108-8850016dcee4
 	github.com/minio/minio-go/v7 v7.0.99
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1

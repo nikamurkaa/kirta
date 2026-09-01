@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"kirta-backend-api/internal/api"
@@ -13,26 +14,28 @@ import (
 	"kirta-backend-api/internal/service/sca"
 	"kirta-backend-api/internal/storage"
 	"kirta-backend-api/migrations"
+	"log/slog"
+	"net"
 	"net/http"
+	"net/url"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-
 	"github.com/golang-migrate/migrate/v4"
 	pgxmigrate "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
-	"github.com/mast-se/go-lib/logger"
-	miniocfg "github.com/mast-se/go-lib/minio"
-	"github.com/mast-se/go-lib/postgres"
-	httpserver "github.com/mast-se/go-lib/server/http"
 	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 type App struct {
-	closer io.Closer
-	s      *http.Server
+	logFile *os.File
+	pool    *pgxpool.Pool
+	s       *http.Server
 }
 
 type Runner interface {
@@ -41,15 +44,23 @@ type Runner interface {
 }
 
 func (a *App) Run() error {
-	if err := a.s.ListenAndServe(); err != nil {
+	err := a.s.ListenAndServe()
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 	return nil
 }
 
 func (a *App) Shutdown(ctx context.Context) error {
-	_ = a.closer.Close()
-	return a.s.Shutdown(ctx)
+	serverErr := a.s.Shutdown(ctx)
+	if a.pool != nil {
+		a.pool.Close()
+	}
+	var logErr error
+	if a.logFile != nil {
+		logErr = a.logFile.Close()
+	}
+	return errors.Join(serverErr, logErr)
 }
 
 func runMigrations(pool *pgxpool.Pool) error {
@@ -72,26 +83,134 @@ func runMigrations(pool *pgxpool.Pool) error {
 	return nil
 }
 
+func newLogger(cfg config.LoggerConfig) (*slog.Logger, *os.File, error) {
+	level := slog.LevelInfo
+	switch strings.ToLower(strings.TrimSpace(cfg.Level)) {
+	case "debug":
+		level = slog.LevelDebug
+	case "warn", "warning":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
+	}
+
+	var writer io.Writer = os.Stdout
+	var logFile *os.File
+	if strings.TrimSpace(cfg.LogFile) != "" {
+		file, err := os.OpenFile(cfg.LogFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+		if err != nil {
+			return nil, nil, fmt.Errorf("open log file: %w", err)
+		}
+		logFile = file
+		writer = io.MultiWriter(os.Stdout, file)
+	}
+
+	logger := slog.New(slog.NewTextHandler(writer, &slog.HandlerOptions{
+		AddSource: cfg.EnableCaller,
+		Level:     level,
+	}))
+	return logger, logFile, nil
+}
+
+func newPostgresPool(ctx context.Context, cfg config.PostgresConfig) (*pgxpool.Pool, error) {
+	host := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
+	dsn := &url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(cfg.Username, cfg.Password),
+		Host:   host,
+		Path:   cfg.Database,
+	}
+	query := dsn.Query()
+	query.Set("sslmode", cfg.SSL)
+	dsn.RawQuery = query.Encode()
+
+	poolCfg, err := pgxpool.ParseConfig(dsn.String())
+	if err != nil {
+		return nil, fmt.Errorf("parse postgres config: %w", err)
+	}
+	if cfg.PoolConfig.MaxConnections > 0 {
+		poolCfg.MaxConns = cfg.PoolConfig.MaxConnections
+	}
+	if cfg.PoolConfig.MinConnections > 0 {
+		poolCfg.MinConns = cfg.PoolConfig.MinConnections
+	}
+	if cfg.PoolConfig.MaxConnectionLifetime > 0 {
+		poolCfg.MaxConnLifetime = cfg.PoolConfig.MaxConnectionLifetime
+	}
+	if cfg.PoolConfig.MaxConnIdleTime > 0 {
+		poolCfg.MaxConnIdleTime = cfg.PoolConfig.MaxConnIdleTime
+	}
+	if cfg.PoolConfig.HealthCheckPeriod > 0 {
+		poolCfg.HealthCheckPeriod = cfg.PoolConfig.HealthCheckPeriod
+	}
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		return nil, fmt.Errorf("create postgres pool: %w", err)
+	}
+
+	pingCtx := ctx
+	cancel := func() {}
+	if cfg.PoolConfig.ConnectTimeout > 0 {
+		pingCtx, cancel = context.WithTimeout(ctx, cfg.PoolConfig.ConnectTimeout)
+	}
+	defer cancel()
+	if err := pool.Ping(pingCtx); err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("ping postgres: %w", err)
+	}
+	return pool, nil
+}
+
+func newMinioClient(cfg config.MinioConfig) (*minio.Client, error) {
+	client, err := minio.New(cfg.Endpoint, &minio.Options{
+		Creds: credentials.NewStaticV4(
+			cfg.Credentials.AccessKey,
+			cfg.Credentials.SecretKey,
+			"",
+		),
+		Secure: cfg.UseSSL,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("minio client: %w", err)
+	}
+	return client, nil
+}
+
 func New(ctx context.Context, cfg *config.Config) (Runner, error) {
 	if err := validateOpenRouterConfig(cfg); err != nil {
 		return nil, err
 	}
 
-	log, closer, err := logger.New(&cfg.Logger)
+	log, logFile, err := newLogger(cfg.Logger)
 	if err != nil {
 		return nil, err
 	}
-	pool, err := postgres.New(ctx, &cfg.Postgres)
+	cleanupLog := true
+	defer func() {
+		if cleanupLog && logFile != nil {
+			_ = logFile.Close()
+		}
+	}()
+
+	pool, err := newPostgresPool(ctx, cfg.Postgres)
 	if err != nil {
 		return nil, err
 	}
+	cleanupPool := true
+	defer func() {
+		if cleanupPool {
+			pool.Close()
+		}
+	}()
+
 	if err := runMigrations(pool); err != nil {
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}
 
-	s3Client, err := miniocfg.New(cfg.Minio)
+	s3Client, err := newMinioClient(cfg.Minio)
 	if err != nil {
-		return nil, fmt.Errorf("minio client: %w", err)
+		return nil, err
 	}
 	exists, err := s3Client.BucketExists(ctx, cfg.App.BucketName)
 	if err != nil {
@@ -109,7 +228,6 @@ func New(ctx context.Context, cfg *config.Config) (Runner, error) {
 	g.Use(api.RequestLogMiddleware(log), gin.Recovery())
 
 	scanRepo := db.NewScanRepository(pool)
-
 	scaScanner := sca.NewScanner(cfg.App.GrypePath, cfg.App.ScaPath, cfg.App.GraphPath)
 	exploitabilityEnricher := exploitability.New(exploitability.Config{
 		APIKey:       cfg.App.OpenRouterAPIKey,
@@ -120,15 +238,16 @@ func New(ctx context.Context, cfg *config.Config) (Runner, error) {
 		CallMapCalls: cfg.App.OpenRouterCallMapCalls,
 	})
 	scanner := service.NewScanner(scaScanner, cfg.App.SyftPath, scanRepo, s3Store, exploitabilityEnricher)
+	scanAPIHandler := api.NewScanHandler(log, scanner)
+	routes.RegisterGinRoutes(g, scanAPIHandler)
 
-	scanApiHandler := api.NewScanHandler(log, scanner)
-
-	routes.RegisterGinRoutes(g, scanApiHandler)
-
-	server := httpserver.NewHTTPServer(ctx, cfg.Http, g)
+	server := api.NewServer(g, cfg.Http)
+	cleanupLog = false
+	cleanupPool = false
 	return &App{
-		closer: closer,
-		s:      server,
+		logFile: logFile,
+		pool:    pool,
+		s:       server,
 	}, nil
 }
 

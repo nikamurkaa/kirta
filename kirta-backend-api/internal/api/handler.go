@@ -14,18 +14,18 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/mast-se/go-lib/logger"
 	"github.com/minio/minio-go/v7"
+	"log/slog"
 
 	"github.com/gin-gonic/gin"
 )
 
 type ScanHandler struct {
-	log  logger.Logger
+	log  *slog.Logger
 	scan ScanSvc
 }
 
-func NewScanHandler(log logger.Logger, scan ScanSvc) *ScanHandler {
+func NewScanHandler(log *slog.Logger, scan ScanSvc) *ScanHandler {
 	return &ScanHandler{
 		log:  log,
 		scan: scan,
