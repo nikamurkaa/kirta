@@ -1,14 +1,20 @@
 package api
 
 import (
-	"context"
+	"kirta-backend-api/internal/config"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	httpserver "github.com/mast-se/go-lib/server/http"
 )
 
-func NewServer(ctx context.Context, g *gin.Engine, cfg httpserver.Config) *http.Server {
-	s := httpserver.NewHTTPServer(ctx, cfg, g)
-	return s
+func NewServer(g *gin.Engine, cfg config.HTTPConfig) *http.Server {
+	return &http.Server{
+		Addr:              cfg.Address,
+		Handler:           g,
+		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
+		ReadTimeout:       cfg.ReadTimeout,
+		WriteTimeout:      cfg.WriteTimeout,
+		IdleTimeout:       cfg.IdleTimeout,
+		MaxHeaderBytes:    cfg.MaxHeaderBytes,
+	}
 }
