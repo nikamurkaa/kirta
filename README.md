@@ -1,3 +1,5 @@
+**English** | [Русский](README.ru.md)
+
 # KIRTA — AI Security Platform
 
 <p align="left">
@@ -9,7 +11,7 @@
   <img src="https://skillicons.dev/icons?i=python,go,react,ts,postgres,docker,nginx,vite,tailwind&theme=dark" alt="KIRTA core technologies" />
 </p>
 
-**KIRTA** — MVP-платформа для объяснимого анализа уязвимостей Python-проектов. Она объединяет результаты классического SCA-сканирования, статические факты из исходного кода и AI-интерпретацию, чтобы помочь команде быстрее понять, какие findings требуют внимания в первую очередь.
+**KIRTA** is an MVP platform for explainable vulnerability analysis of Python projects. It combines conventional SCA results, static facts from source code, and AI interpretation to help teams identify which findings need attention first.
 
 **Core stack:** Go, Gin, Python, React, TypeScript, PostgreSQL, MinIO/S3, Docker, Nginx  
 **Security tooling:** Syft, Grype, Python AST/call tracing  
@@ -17,46 +19,46 @@
 
 ---
 
-## Что решает KIRTA
+## What KIRTA addresses
 
-Классический SCA хорошо отвечает на вопрос «какие известные CVE есть в зависимостях?», но сам по себе не показывает, насколько конкретная библиотека связана с кодом проекта и что найденный дефект означает для текущего контекста.
+Conventional SCA answers “which known CVEs affect these dependencies?” well, but does not by itself show how a particular library relates to the project's code or what a finding means in the current context.
 
-KIRTA добавляет к результатам сканера контекст исходного кода:
+KIRTA adds source code context to scanner results:
 
-- строит SBOM проекта;
-- получает SCA findings;
-- ищет использование уязвимых библиотек в Python-коде;
-- строит call map;
-- показывает исходные файлы и строки evidence;
-- по запросу передаёт структурированный security-контекст LLM;
-- возвращает объяснение и статус эксплуатируемости для отдельного finding.
+- builds a project SBOM;
+- collects SCA findings;
+- identifies the use of vulnerable libraries in Python code;
+- builds a call map;
+- displays source files and evidence lines;
+- sends structured security context to an LLM on request;
+- returns an explanation and exploitability status for an individual finding.
 
-Главная цель — **не заменить security-инженера и не доказать эксплуатацию автоматически**, а сократить объём ручного первичного разбора и сделать технический отчёт более объяснимым.
+The main goal is **not to replace a security engineer or automatically prove exploitation**, but to reduce manual initial triage and make technical reports easier to interpret.
 
 ## MVP scope
 
-Текущая реализация сознательно ограничена:
+The current implementation has deliberate limitations:
 
-1. анализируется только Python-код;
-2. call map строится только для Python;
-3. SBOM генерируется через `Syft`;
-4. SCA выполняется через `Grype`;
-5. поддерживается SLOC и определение языкового состава проекта;
-6. реализован SCA-сценарий — SAST и DAST findings пока не входят в MVP;
-7. сканирование выполняется синхронно;
-8. AI-анализ выполняется on-demand для отдельного finding;
-9. модель настраивается через OpenRouter; пример конфигурации использует `openai/gpt-oss-120b:free`.
+1. only Python code is analyzed;
+2. call maps are built only for Python;
+3. SBOMs are generated with `Syft`;
+4. SCA is performed with `Grype`;
+5. SLOC counting and language composition detection are supported;
+6. the SCA workflow is implemented; SAST and DAST findings are not yet part of the MVP;
+7. scans run synchronously;
+8. AI analysis runs on demand for an individual finding;
+9. the model is configured through OpenRouter; the example configuration uses `openai/gpt-oss-120b:free`.
 
-Эти ограничения явно зафиксированы, чтобы результаты MVP не воспринимались как полноценная замена промышленной AppSec-платформе.
+These limitations are explicitly documented so that MVP results are not mistaken for a full replacement for a production-grade AppSec platform.
 
 ---
 
-## Основной сценарий
+## Main workflow
 
 ```text
-ZIP проекта
+Project ZIP
    ↓
-безопасная распаковка
+safe extraction
    ↓
 Syft → SBOM
    ↓
@@ -71,84 +73,84 @@ KIRTA UI
 On-demand LLM analysis for a finding
 ```
 
-### Что получает пользователь
+### What the user receives
 
-- список найденных SCA findings;
-- package, version, CVE, severity и fixed versions;
-- сведения об использовании пакета в исходном коде;
-- call map для библиотеки;
-- просмотр source evidence в интерфейсе;
-- AI-объяснение для отдельного finding;
-- статус эксплуатируемости с оговоркой о пределах статического анализа.
+- a list of detected SCA findings;
+- package, version, CVE, severity, and fixed versions;
+- information about package usage in the source code;
+- a library call map;
+- source evidence viewing in the UI;
+- an AI explanation for an individual finding;
+- an exploitability status qualified by the limitations of static analysis.
 
 ---
 
-## Статусы эксплуатируемости
+## Exploitability statuses
 
-| Статус | Значение |
+| Status | Meaning |
 | --- | --- |
-| `exploitable` | В текущих статических фактах и AI-анализе есть признаки практической достижимости дефекта |
-| `not_exploitable` | Текущий набор статических фактов не подтверждает использование/достижимость уязвимого сценария |
-| `unknown` | Данных недостаточно для уверенного вывода; требуется ручная проверка |
+| `exploitable` | Current static facts and AI analysis indicate practical reachability of the defect |
+| `not_exploitable` | The current static facts do not confirm use or reachability of the vulnerable scenario |
+| `unknown` | There is insufficient data for a confident conclusion; manual review is required |
 
-> KIRTA не утверждает, что статический анализ гарантирует эксплуатацию или отсутствие риска. Вердикт — инструмент приоритизации, а не доказательство полной безопасности.
+> KIRTA does not claim that static analysis guarantees exploitation or the absence of risk. The verdict is a prioritization aid, not proof of complete security.
 
 ---
 
-## Почему здесь нужен AI
+## Why AI is used
 
-Без LLM KIRTA уже может показать технические факты: package, version, CVE, severity, fixed versions, imports и call map. Но инженеру всё равно приходится интерпретировать этот контекст вручную.
+Without an LLM, KIRTA can already display technical facts: package, version, CVE, severity, fixed versions, imports, and a call map. An engineer still has to interpret that context manually.
 
-AI используется как **интерпретатор структурированных security-фактов**, а не как источник истины:
+AI acts as an **interpreter of structured security facts**, not a source of truth:
 
-- получает данные finding и ограниченный call map;
-- анализирует признаки практической достижимости;
-- возвращает строго структурированный ответ;
-- формирует короткое объяснение;
-- помогает понять, стоит ли finding чинить сейчас, отложить или отправить на ручную проверку.
+- receives finding data and a limited call map;
+- analyzes indications of practical reachability;
+- returns a strictly structured response;
+- produces a short explanation;
+- helps determine whether a finding should be fixed now, deferred, or sent for manual review.
 
-Backend-клиент настроен на предсказуемый структурированный ответ:
+The backend client is configured for predictable, structured responses:
 
 - `response_format: json_schema`;
 - `strict: true`;
 - `temperature: 0`;
-- валидация ответа модели;
-- ограничения на объём call map, отправляемого в LLM.
+- model response validation;
+- limits on the amount of call map data sent to the LLM.
 
-### Граница данных AI-интеграции
+### AI integration data boundary
 
-AI-анализ запускается только по запросу пользователя для выбранного finding. В OpenRouter передаются идентификатор и описание CVE, severity, а также ограниченная часть call map: пути к файлам, номера строк, сведения о вызовах и короткие фрагменты соответствующих выражений.
+AI analysis runs only at the user's request for a selected finding. The data sent to OpenRouter includes the CVE identifier and description, severity, and a limited portion of the call map: file paths, line numbers, call information, and short fragments of the corresponding expressions.
 
-Полный ZIP-архив, полное содержимое исходных файлов, учётные данные PostgreSQL и MinIO, а также API-ключ приложения в запрос к модели не включаются. Объём call map ограничивается настройками `openrouter_callmap_max_files` и `openrouter_callmap_max_calls`; в payload также добавляется признак того, был ли контекст усечён.
+The complete ZIP archive, full source file contents, PostgreSQL and MinIO credentials, and the application's API key are not included in the model request. The call map size is limited by `openrouter_callmap_max_files` and `openrouter_callmap_max_calls`; the payload also indicates whether the context was truncated.
 
-> Фрагменты call map могут содержать строковые литералы из анализируемых вызовов. Перед использованием внешнего AI-провайдера следует проверить его правила обработки данных и сканировать только те проекты, на анализ которых есть разрешение.
+> Call map fragments may contain string literals from the analyzed calls. Before using an external AI provider, review its data handling policies and scan only projects you are authorized to analyze.
 
 ---
 
-## Архитектура
+## Architecture
 
 <img width="2695" height="1428" alt="KIRTA architecture" src="https://github.com/user-attachments/assets/2ffa58dd-bd7c-4df0-a04a-300c3ec19267" />
 
 ### Backend
 
-Backend реализован на **Go + Gin** и оркестрирует scan pipeline.
+The backend is built with **Go + Gin** and orchestrates the scan pipeline.
 
-Ключевые возможности:
+Key capabilities:
 
-- загрузка ZIP-архива Python-проекта;
-- защита от Zip Slip при распаковке;
-- проверка наличия Python-кода;
-- подсчёт SLOC и языкового состава;
-- запуск Syft и Grype;
-- нормализация SCA-результата;
-- построение call map;
-- хранение scan metadata, findings и graphs в PostgreSQL;
-- сохранение source files в MinIO/S3-compatible storage;
-- выдача исходного кода по API;
+- uploading a Python project ZIP archive;
+- Zip Slip protection during extraction;
+- checking for Python code;
+- calculating SLOC and language composition;
+- running Syft and Grype;
+- normalizing SCA results;
+- building call maps;
+- storing scan metadata, findings, and graphs in PostgreSQL;
+- saving source files in MinIO/S3-compatible storage;
+- serving source code through the API;
 - on-demand AI enrichment;
-- OpenAPI/Swagger документация.
+- OpenAPI/Swagger documentation.
 
-| Слой | Технологии |
+| Layer | Technologies |
 | --- | --- |
 | HTTP API | Go, Gin |
 | Database | PostgreSQL, JSONB, pgx |
@@ -161,23 +163,23 @@ Backend реализован на **Go + Gin** и оркестрирует scan 
 
 ### Frontend
 
-Frontend — SPA на **React + TypeScript + Vite**.
+The frontend is an SPA built with **React + TypeScript + Vite**.
 
-В интерфейсе реализованы:
+The UI includes:
 
 - landing page;
-- demo/mock login для MVP;
-- история сканирований;
-- drag-and-drop загрузка ZIP;
+- demo/mock login for the MVP;
+- scan history;
+- drag-and-drop ZIP uploads;
 - scan report;
-- severity и exploitability badges;
-- поиск и фильтрация findings;
+- severity and exploitability badges;
+- finding search and filtering;
 - call map panel;
-- source code modal с подсветкой evidence;
+- a source code modal with evidence highlighting;
 - theme switching;
-- явная маршрутизация `/`, `/login`, `/scans`, `/:scanId` и служебных путей.
+- explicit routing for `/`, `/login`, `/scans`, `/:scanId`, and utility paths.
 
-| Слой | Технологии |
+| Layer | Technologies |
 | --- | --- |
 | Core | React 18, TypeScript, Vite |
 | Routing | React Router v6 |
@@ -189,7 +191,7 @@ Frontend — SPA на **React + TypeScript + Vite**.
 
 ---
 
-## Структура репозитория
+## Repository structure
 
 ```text
 .
@@ -228,28 +230,28 @@ Frontend — SPA на **React + TypeScript + Vite**.
 
 ## API overview
 
-| Method | Endpoint | Назначение |
+| Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `POST` | `/v1/scan` | Загрузить ZIP и запустить анализ |
-| `GET` | `/v1/scans` | Получить список сканирований |
-| `GET` | `/v1/scans/{id}` | Получить полный scan report |
-| `GET` | `/v1/scans/{id}/graphs?package=<name>` | Получить call map библиотеки |
-| `GET` | `/v1/scans/{id}/files/{filepath}` | Получить исходный файл из storage |
-| `POST` | `/v1/scans/{id}/findings/{finding_id}/explanation` | Запустить AI-анализ finding |
+| `POST` | `/v1/scan` | Upload a ZIP archive and start analysis |
+| `GET` | `/v1/scans` | List scans |
+| `GET` | `/v1/scans/{id}` | Retrieve the full scan report |
+| `GET` | `/v1/scans/{id}/graphs?package=<name>` | Retrieve a library call map |
+| `GET` | `/v1/scans/{id}/files/{filepath}` | Retrieve a source file from storage |
+| `POST` | `/v1/scans/{id}/findings/{finding_id}/explanation` | Run AI analysis for a finding |
 
 ---
 
-## Скриншоты
+## Screenshots
 
 ### Landing
 
 ![KIRTA landing page](docs/assets/landing.png)
 
-### Загрузка проекта
+### Project upload
 
 ![KIRTA upload dialog](docs/assets/upload.png)
 
-### История сканирований
+### Scan history
 
 ![KIRTA scan history](docs/assets/scans.png)
 
@@ -271,7 +273,7 @@ Frontend — SPA на **React + TypeScript + Vite**.
 
 ---
 
-## Быстрый старт: frontend
+## Quick start: frontend
 
 ```bash
 cd kirta-ui
@@ -286,31 +288,31 @@ npm run build
 npm run preview
 ```
 
-Проверка качества:
+Quality checks:
 
 ```bash
 npm run lint
 npm run format
 ```
 
-## Быстрый старт: backend
+## Quick start: backend
 
-Backend требует PostgreSQL, MinIO/S3-compatible storage, Syft и Grype.
+The backend requires PostgreSQL, MinIO/S3-compatible storage, Syft, and Grype.
 
 ```bash
 cd kirta-backend-api
 cp config.example.yaml config.yaml
 ```
 
-В `config.yaml` укажите параметры PostgreSQL, MinIO/S3, пути к Syft/Grype и OpenRouter API key.
+In `config.yaml`, specify PostgreSQL and MinIO/S3 settings, paths to Syft/Grype, and an OpenRouter API key.
 
-Запуск:
+Start:
 
 ```bash
 go run ./cmd
 ```
 
-По умолчанию backend доступен на:
+By default, the backend is available at:
 
 ```text
 http://localhost:8080
@@ -324,9 +326,9 @@ http://localhost:8080/swagger/index.html
 
 ---
 
-## Конфигурация AI
+## AI configuration
 
-Пример из `kirta-backend-api/config.example.yaml`:
+Example from `kirta-backend-api/config.example.yaml`:
 
 ```yaml
 app:
@@ -338,7 +340,7 @@ app:
   openrouter_callmap_max_calls: 200
 ```
 
-AI-анализ выполняется по запросу:
+AI analysis runs on request:
 
 ```http
 POST /v1/scans/{id}/findings/{finding_id}/explanation
@@ -346,55 +348,55 @@ POST /v1/scans/{id}/findings/{finding_id}/explanation
 
 ---
 
-## Оценка потенциального экономического эффекта
+## Estimating potential cost savings
 
-KIRTA создавалась вокруг гипотезы, что значительная часть стоимости vulnerability management приходится на ручной первичный triage.
+KIRTA was built around the hypothesis that manual initial triage accounts for a substantial share of vulnerability management costs.
 
-Пример сценарного расчёта:
+An illustrative calculation:
 
-- ручной triage одного finding: около 15 минут;
-- условная стоимость минуты работы специалиста: 28 ₽;
-- примерная стоимость ручного разбора: 420 ₽ на finding;
-- примерная стоимость одного LLM-вызова в исходной модели расчёта: около 7 ₽.
+- manual triage of one finding: approximately 15 minutes;
+- assumed cost per minute of a specialist's time: RUB 28;
+- estimated manual triage cost: RUB 420 per finding;
+- estimated cost of one LLM call in the original calculation model: approximately RUB 7.
 
-При 1000 findings это даёт ориентир порядка **420 000 ₽** ручного triage против **7 000 ₽** LLM-вызовов, то есть потенциальную разницу около **413 000 ₽**.
+For 1,000 findings, this gives a rough estimate of **RUB 420,000** for manual triage versus **RUB 7,000** for LLM calls, a potential difference of approximately **RUB 413,000**.
 
-> Это **иллюстративный сценарий, а не измеренный production-результат KIRTA**. Фактический эффект зависит от модели, стоимости токенов, качества автоматического triage, доли findings, требующих ручной проверки, и стоимости рабочего времени команды.
+> This is **an illustrative scenario, not a measured KIRTA production result**. Actual savings depend on the model, token costs, automated triage quality, the proportion of findings requiring manual review, and the cost of the team's time.
 
-Исходные материалы, использованные для оценки времени triage:
+Source materials used to estimate triage time:
 
-- Corgea — материалы о снижении false positives в SAST;
-- Astra Security — материалы о false-positive triage в DAST.
+- Corgea — materials on reducing false positives in SAST;
+- Astra Security — materials on false-positive triage in DAST.
 
 ---
 
 ## Roadmap
 
-Ближайшее развитие MVP:
+Near-term MVP development:
 
-- поддержка дополнительных языков;
-- расширенный AI-вердикт: confidence, priority, reason codes, recommendation;
-- массовая AI-приоритизация findings;
-- улучшенная визуализация цепочки достижимости.
+- support for additional languages;
+- an extended AI verdict: confidence, priority, reason codes, recommendation;
+- bulk AI prioritization of findings;
+- improved reachability chain visualization.
 
-Дальше:
+Further ahead:
 
 - SAST findings;
 - DAST findings;
 - secrets / IaC / container security signals;
-- интеграции с GitHub/GitLab и другими VCS;
-- team workspace и role-based access;
-- CI/CD mode для анализа pull requests.
+- integrations with GitHub/GitLab and other VCS platforms;
+- team workspaces and role-based access;
+- a CI/CD mode for pull request analysis.
 
 ---
 
 ## License
 
-Проект распространяется под лицензией **MIT**: [`LICENSE`](./LICENSE).
+The project is distributed under the **MIT** license: [`LICENSE`](./LICENSE).
 
 ---
 
-## Авторы
+## Authors
 
-- [Николь Журбенко (@nikamurkaa)](https://github.com/nikamurkaa)
+- [Nicole Zhurbenko (@nikamurkaa)](https://github.com/nikamurkaa)
 - [PArk (@76parker)](https://github.com/76parker)
