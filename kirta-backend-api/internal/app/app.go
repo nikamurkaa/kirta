@@ -8,7 +8,7 @@ import (
 	"kirta-backend-api/internal/api"
 	"kirta-backend-api/internal/api/routes"
 	"kirta-backend-api/internal/config"
-	"kirta-backend-api/internal/persistance/db"
+	"kirta-backend-api/internal/persistence/db"
 	"kirta-backend-api/internal/service"
 	"kirta-backend-api/internal/service/exploitability"
 	"kirta-backend-api/internal/service/sca"
