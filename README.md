@@ -383,3 +383,10 @@ KIRTA создавалась вокруг гипотезы, что значит�
 ## License
 
 Проект распространяется под лицензией **MIT**: [`LICENSE`](./LICENSE).
+
+---
+
+## Авторы
+
+- [Николь Журбенко (@nikamurkaa)](https://github.com/nikamurkaa)
+- [PArk (@76parker)](https://github.com/76parker)
