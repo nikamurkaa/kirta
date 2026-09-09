@@ -190,7 +190,7 @@ Frontend — SPA на **React + TypeScript + Vite**.
 │   ├── internal/api/                   # handlers, routes, middleware
 │   ├── internal/config/                # YAML configuration
 │   ├── internal/domain/                # domain DTO
-│   ├── internal/persistance/db/        # PostgreSQL repository
+│   ├── internal/persistence/db/        # PostgreSQL repository
 │   ├── internal/service/               # scan pipeline, SCA, AI enrichment
 │   ├── internal/storage/               # MinIO/S3 storage
 │   ├── migrations/
